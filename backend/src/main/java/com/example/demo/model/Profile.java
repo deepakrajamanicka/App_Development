@@ -10,24 +10,21 @@ public class Profile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int profileId;
 
-    private String name; // New field
+    private String name;
     private String age;
     private String dept;
     private String role;
     private String mobile;
     private String address;
 
-    // One-to-One relationship with Schedule
     @OneToOne
     @JoinColumn(name = "schedule_id", referencedColumnName = "scheduleId")
     private Schedule schedule;
 
-    // One-to-One relationship with ShiftSwap
     @OneToOne
     @JoinColumn(name = "shiftswap_id", referencedColumnName = "shiftSwapId")
     private ShiftSwap shiftSwap;
 
-    // One-to-One relationship with TimeOffRequest
     @OneToOne
     @JoinColumn(name = "timeoffrequest_id", referencedColumnName = "timeOffRequestId")
     private TimeOffRequest timeOffRequest;
@@ -36,7 +33,7 @@ public class Profile {
     public Profile() {}
 
     public Profile(String name, String age, String dept, String role, String mobile, String address) {
-        this.name = name; // Initialize new field
+        this.name = name;
         this.age = age;
         this.dept = dept;
         this.role = role;
@@ -53,11 +50,11 @@ public class Profile {
         this.profileId = profileId;
     }
 
-    public String getName() { // New getter
+    public String getName() {
         return name;
     }
 
-    public void setName(String name) { // New setter
+    public void setName(String name) {
         this.name = name;
     }
 

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3000")
 @RequestMapping("/api/persons")
 public class PersonController {
 
@@ -18,37 +19,46 @@ public class PersonController {
     private PersonService personService;
 
     @GetMapping
-    public ResponseEntity<List<Person>> getAllPersons() {
-        List<Person> persons = personService.getAllPersons();
-        return new ResponseEntity<>(persons, HttpStatus.OK);
+    public List<Person> getAllPersons() {
+        return personService.getAllPersons();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Person> getPersonById(@PathVariable("id") int id) {
+    public ResponseEntity<Person> getPersonById(@PathVariable int id) {
         Optional<Person> person = personService.getPersonById(id);
-        return person.map(ResponseEntity::ok)
-                     .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        return person.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<Person> createPerson(@RequestBody Person person) {
-        Person createdPerson = personService.createPerson(person);
-        return new ResponseEntity<>(createdPerson, HttpStatus.CREATED);
+        try {
+            Person createdPerson = personService.createPerson(person);
+            return ResponseEntity.ok(createdPerson);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Person> updatePerson(@PathVariable("id") int id, @RequestBody Person person) {
-        Person updatedPerson = personService.updatePerson(id, person);
-        return updatedPerson != null ? 
-               new ResponseEntity<>(updatedPerson, HttpStatus.OK) : 
-               ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person person) {
+        if (id == person.getUserId()) {
+            Person updatedPerson = personService.updatePerson(id, person);
+            if (updatedPerson != null) {
+                return ResponseEntity.ok(updatedPerson);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePerson(@PathVariable("id") int id) {
-        boolean isDeleted = personService.deletePerson(id);
-        return isDeleted ? 
-               ResponseEntity.status(HttpStatus.NO_CONTENT).build() : 
-               ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public ResponseEntity<Void> deletePerson(@PathVariable int id) {
+        if (personService.deletePerson(id)) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

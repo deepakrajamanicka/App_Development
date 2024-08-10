@@ -16,7 +16,7 @@ public class Person {
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinColumn(name = "profile_id", referencedColumnName = "profileId")
     private Profile profile;
- 
+
     public Person() {}
 
     public Person(String email, String password, Profile profile) {

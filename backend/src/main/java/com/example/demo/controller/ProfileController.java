@@ -27,7 +27,7 @@ public class ProfileController {
     public ResponseEntity<Profile> getProfileById(@PathVariable int id) {
         Optional<Profile> profile = profileService.getProfileById(id);
         return profile.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     @PostMapping

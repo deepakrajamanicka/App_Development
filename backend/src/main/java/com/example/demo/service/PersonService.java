@@ -1,7 +1,10 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Person;
+import com.example.demo.model.Profile;
 import com.example.demo.repo.PersonRepo;
+import com.example.demo.repo.ProfileRepo;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +19,9 @@ public class PersonService {
     @Autowired
     private PersonRepo personRepository;
 
+    @Autowired
+    private ProfileRepo profileRepository;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public List<Person> getAllPersons() {
@@ -27,23 +33,55 @@ public class PersonService {
     }
 
     public Person createPerson(Person person) {
-        // Encrypt the password before saving
+        if (person == null || person.getEmail() == null || person.getPassword() == null) {
+            throw new IllegalArgumentException("Person details are missing or invalid");
+        }
+
         String encodedPassword = this.passwordEncoder.encode(person.getPassword());
         person.setPassword(encodedPassword);
+
+        Profile profile = person.getProfile();
+        if (profile != null) {
+            Profile savedProfile = profileRepository.save(profile);
+            person.setProfile(savedProfile);
+        }
+
         return personRepository.save(person);
     }
 
     public Person updatePerson(int id, Person person) {
-        if (personRepository.existsById(id)) {
-            // Encrypt the password before updating if it's present
+        if (person == null) {
+            throw new IllegalArgumentException("Person details are missing");
+        }
+
+        Optional<Person> existingPersonOpt = personRepository.findById(id);
+        if (existingPersonOpt.isPresent()) {
+            Person existingPerson = existingPersonOpt.get();
+
             if (person.getPassword() != null) {
                 String encodedPassword = this.passwordEncoder.encode(person.getPassword());
-                person.setPassword(encodedPassword);
+                existingPerson.setPassword(encodedPassword);
             }
-            person.setUserId(id); // Ensure the ID is set for the update
-            return personRepository.save(person);
+
+            if (person.getEmail() != null) {
+                existingPerson.setEmail(person.getEmail());
+            }
+
+            if (person.getProfile() != null) {
+                Profile profile = person.getProfile();
+                Profile existingProfile = existingPerson.getProfile();
+                if (existingProfile != null) {
+                    profile.setProfileId(existingProfile.getProfileId());
+                    profileRepository.save(profile);
+                } else {
+                    Profile savedProfile = profileRepository.save(profile);
+                    existingPerson.setProfile(savedProfile);
+                }
+            }
+
+            return personRepository.save(existingPerson);
         } else {
-            return null; // Return null or throw an exception if the person does not exist
+            throw new EntityNotFoundException("Person with id " + id + " not found");
         }
     }
 
@@ -52,7 +90,8 @@ public class PersonService {
             personRepository.deleteById(id);
             return true;
         } else {
-            return false; // Return false if the person does not exist
+            throw new EntityNotFoundException("Person with id " + id + " not found");
         }
     }
 }
+    

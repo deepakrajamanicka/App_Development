@@ -40,7 +40,7 @@ public class ProfileService {
             profileRepository.deleteById(id);
             return true;
         } else {
-            return false; // Return false if the profile does not exist
+            return false; 
         }
     }
 }
