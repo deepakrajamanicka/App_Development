@@ -14,38 +14,43 @@ public class Profile {
     private String age;
     private String dept;
     private String role;
+    private String experience;
     private String mobile;
     private String address;
-
+    
     @OneToOne
     @JoinColumn(name = "schedule_id", referencedColumnName = "scheduleId")
     private Schedule schedule;
-
+    
     @OneToOne
     @JoinColumn(name = "shiftswap_id", referencedColumnName = "shiftSwapId")
     private ShiftSwap shiftSwap;
-
+    
     @OneToOne
     @JoinColumn(name = "timeoffrequest_id", referencedColumnName = "timeOffRequestId")
     private TimeOffRequest timeOffRequest;
-
+    
     // Constructors
     public Profile() {}
-
-    public Profile(String name, String age, String dept, String role, String mobile, String address) {
+    
+    public Profile(String name, String age, String dept, String role, String experience,String mobile, String address) {
         this.name = name;
         this.age = age;
         this.dept = dept;
         this.role = role;
         this.mobile = mobile;
         this.address = address;
+        this.experience=experience;
     }
-
+    
     // Getters and Setters
     public int getProfileId() {
         return profileId;
     }
-
+    public String getExperience() {
+        return experience;
+    }
+    
     public void setProfileId(int profileId) {
         this.profileId = profileId;
     }
@@ -121,4 +126,10 @@ public class Profile {
     public void setTimeOffRequest(TimeOffRequest timeOffRequest) {
         this.timeOffRequest = timeOffRequest;
     }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+    
+
 }

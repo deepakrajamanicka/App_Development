@@ -18,6 +18,18 @@ public class ProfileService {
         return profileRepository.findAll();
     }
 
+    public List<Profile> getProfilesByRoleAndDepartment(String role, String department) {
+        if (role != null && department != null) {
+            return profileRepository.findByRoleAndDept(role, department);
+        } else if (role != null) {
+            return profileRepository.findByRole(role);
+        } else if (department != null) {
+            return profileRepository.findByDept(department);
+        } else {
+            return getAllProfiles();
+        }
+    }
+
     public Optional<Profile> getProfileById(int id) {
         return profileRepository.findById(id);
     }
@@ -28,10 +40,19 @@ public class ProfileService {
 
     public Profile updateProfile(int id, Profile profile) {
         if (profileRepository.existsById(id)) {
-            profile.setProfileId(id); // Ensure the ID is set for the update
-            return profileRepository.save(profile);
+            Profile existingProfile = profileRepository.findById(id).orElseThrow();
+
+            existingProfile.setName(profile.getName());
+            existingProfile.setAge(profile.getAge());
+            existingProfile.setDept(profile.getDept());
+            existingProfile.setRole(profile.getRole());
+            existingProfile.setExperience(profile.getExperience());
+            existingProfile.setMobile(profile.getMobile());
+            existingProfile.setAddress(profile.getAddress());
+
+            return profileRepository.save(existingProfile);
         } else {
-            return null; // Return null or throw an exception if the profile does not exist
+            return null;
         }
     }
 
@@ -40,7 +61,7 @@ public class ProfileService {
             profileRepository.deleteById(id);
             return true;
         } else {
-            return false; 
+            return false;
         }
     }
 }

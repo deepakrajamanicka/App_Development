@@ -18,8 +18,15 @@ public class ProfileController {
     private ProfileService profileService;
 
     @GetMapping
-    public ResponseEntity<List<Profile>> getAllProfiles() {
-        List<Profile> profiles = profileService.getAllProfiles();
+    public ResponseEntity<List<Profile>> getAllProfiles(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String department) {
+        List<Profile> profiles;
+        if (role == null && department == null) {
+            profiles = profileService.getAllProfiles();
+        } else {
+            profiles = profileService.getProfilesByRoleAndDepartment(role, department);
+        }
         return new ResponseEntity<>(profiles, HttpStatus.OK);
     }
 
