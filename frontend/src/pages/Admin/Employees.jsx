@@ -1,383 +1,611 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Modal, TextField, Select, MenuItem, FormControl,
-  InputLabel, IconButton, Tooltip, Dialog, DialogActions, DialogContent, DialogTitle
+  Box,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Modal,
+  TextField,
+  MenuItem,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
-import { useFormik } from 'formik';
+import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-// Replace with your API URL
-const apiUrl = 'http://localhost:8080/api';
+const defaultDepartments = [
+  'Cardiology', 'Radiology', 'Oncology', 'Pediatrics', 'Emergency',
+  'Gynecology', 'Neurology', 'Orthopedics', 'Urology', 'Internal Medicine',
+];
+
+const professions = [
+  'Doctor', 'Nurse', 'Surgeon', 'Receptionist',
+];
+
+const roles = ['USER', 'ADMIN'];
 
 const EmployeeStatusDashboard = () => {
-  const [selectedRole, setSelectedRole] = useState('');
-  const [openDetails, setOpenDetails] = useState(false);
-  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [staffData, setStaffData] = useState([]);
+  const [departments, setDepartments] = useState(defaultDepartments);
+  const [roleOptions, setRoleOptions] = useState(roles);
+  const [professionsOptions, setProfessionsOptions] = useState(professions);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [deletingStaff, setDeletingStaff] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [token, setToken] = useState(sessionStorage.getItem('token') || '');
 
   useEffect(() => {
     fetchStaffData();
-  }, []);
+  }, [selectedDepartment, selectedRole]);
 
   const fetchStaffData = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(`${apiUrl}/profiles`);
-      setStaffData(response.data);
-    } catch (error) {
-      console.error('Error fetching staff data', error);
-    }
-  };
-
-  const handleOpenDetails = (staff) => {
-    formik.setValues(staff || {
-      userId: '',
-      email: '',
-      password: '',
-      name: '',
-      age: '',
-      role: '',
-      mobile: '',
-      address: '',
-      department: ''
-    });
-    setOpenDetails(true);
-  };
-
-  const handleCloseDetails = () => {
-    setOpenDetails(false);
-  };
-
-  const handleSave = async (values) => {
-    try {
-      const loginDetails = {
-        email: values.email,
-        password: values.password
-      };
-
-      const profileDetails = {
-        name: values.name,
-        age: values.age,
-        role: values.role,
-        mobile: values.mobile,
-        address: values.address,
-        department: values.department
-      };
-
-      if (values.userId) {
-        await axios.put(`${apiUrl}/persons/${values.userId}`, loginDetails);
-        await axios.put(`${apiUrl}/profiles/${values.userId}`, profileDetails);
+      const params = {};
+      if (selectedDepartment) params.dept = selectedDepartment;
+      if (selectedRole) params.role = selectedRole;
+  
+      const response = await axios.get('http://localhost:8080/api/profiles', {
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('API Response:', response.data);
+  
+      if (Array.isArray(response.data)) {
+        setStaffData(response.data);
       } else {
-        const loginResponse = await axios.post(`${apiUrl}/persons`, loginDetails);
-        await axios.post(`${apiUrl}/profiles`, { ...profileDetails, userId: loginResponse.data.userId });
+        console.error('Expected an array but got:', response.data);
+        setStaffData([]);
       }
-
-      fetchStaffData();
-      handleCloseDetails();
     } catch (error) {
-      console.error('Error saving staff data', error);
+      console.error('Error fetching staff data:', error);
+      setStaffData([]);
+    } finally {
+      setLoading(false);
     }
   };
+  
 
-  const handleDelete = (id) => {
-    setConfirmDeleteId(id);
-    setOpenConfirmDialog(true);
+  const handleOpenAdd = () => setOpenAdd(true);
+  const handleCloseAdd = () => setOpenAdd(false);
+
+  const handleOpenEdit = (staff) => {
+    setEditingStaff(staff);
+    setOpenEdit(true);
   };
 
-  const confirmDelete = async () => {
+  const handleCloseEdit = () => {
+    setOpenEdit(false);
+    setEditingStaff(null);
+  };
+
+  const handleOpenDelete = (staff) => {
+    setDeletingStaff(staff);
+    setOpenDelete(true);
+  };
+
+  const handleCloseDelete = () => {
+    setOpenDelete(false);
+    setDeletingStaff(null);
+  };
+
+  const handleAddStaff = async (values, { setSubmitting, resetForm }) => {
     try {
-      await axios.delete(`${apiUrl}/profiles/${confirmDeleteId}`);
-      await axios.delete(`${apiUrl}/persons/${confirmDeleteId}`);
+      const formattedValues = {
+        ...values,
+        role: "USER", // Fixed value for now; change if you need dynamic role assignment
+      };
+      const response = await axios.post('http://localhost:8080/api/v1/auth/register', formattedValues, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      
+      const newToken = response.data.token;
+      setToken(newToken);
+      sessionStorage.setItem('token', newToken);
+  
       fetchStaffData();
+      handleCloseAdd();
+      resetForm();
     } catch (error) {
-      console.error('Error deleting staff data', error);
+      console.error('Error adding staff:', error);
     }
-    setOpenConfirmDialog(false);
+    setSubmitting(false);
+  };
+  
+  const handleEditStaff = async (values, { setSubmitting }) => {
+    try {
+      const formattedValues = {
+        ...values,
+        role: values.role || "USER", // Default to "USER" if no role is provided
+      };
+      await axios.put(`http://localhost:8080/api/profiles/${values.profileId}`, formattedValues, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      fetchStaffData();
+      handleCloseEdit();
+    } catch (error) {
+      console.error('Error updating staff:', error);
+    }
+    setSubmitting(false);
+  };
+  
+  const handleDeleteStaff = async () => {
+    if (deletingStaff) {
+      try {
+        await axios.delete(`http://localhost:8080/api/profiles/${deletingStaff.profileId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+        fetchStaffData();
+        handleCloseDelete();
+      } catch (error) {
+        console.error('Error deleting staff:', error);
+      }
+    }
   };
 
-  const handleCloseConfirmDialog = () => {
-    setOpenConfirmDialog(false);
-  };
-
-  const filteredData = selectedRole === '' ? staffData : staffData.filter(item => item.role === selectedRole);
-
-  const formik = useFormik({
-    initialValues: {
-      userId: '',
-      email: '',
-      password: '',
-      name: '',
-      age: '',
-      role: '',
-      mobile: '',
-      address: '',
-      department: ''
-    },
-    validationSchema: Yup.object({
-      email: Yup.string().email('Invalid email address').required('Required'),
-      password: Yup.string().required('Required'),
-      name: Yup.string().required('Required'),
-      age: Yup.string().required('Required'),
-      role: Yup.string().required('Required'),
-      mobile: Yup.string().required('Required'),
-      address: Yup.string().required('Required'),
-      department: Yup.string().required('Required')
-    }),
-    onSubmit: (values) => {
-      handleSave(values);
-    }
+  const validationSchema = Yup.object({
+    name: Yup.string().required('Name is required'),
+    email: Yup.string().email('Invalid email address').required('Email is required'),
+    password: Yup.string().required('Password is required'),
+    profession: Yup.string().required('Profession is required'),
+    age: Yup.number().required('Age is required').positive('Age must be positive').integer('Age must be an integer'),
+    dept: Yup.string().required('Department is required'),
+    experience: Yup.string().required('Experience is required'),
+    mobile: Yup.string().required('Mobile number is required'),
+    address: Yup.string(),
+    role: Yup.string().required('Role is required'), // Add role validation
   });
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-        Staff Management Dashboard
+    <Box sx={{ display: 'flex', flexDirection: 'column', p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Manage Staff
       </Typography>
-      <Typography variant="h5" gutterBottom>
-        Filter By Role:
-      </Typography>
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', width: 250 }}>
-        <Select
-          value={selectedRole}
-          onChange={(e) => setSelectedRole(e.target.value)}
-          displayEmpty
-          inputProps={{ 'aria-label': 'Select Role' }}
-          sx={{ width: '100%' }}
-        >
-          <MenuItem value="">
-            <em>All Roles</em>
-          </MenuItem>
-          <MenuItem value="Doctor">Doctor</MenuItem>
-          <MenuItem value="Nurse">Nurse</MenuItem>
-          <MenuItem value="Receptionist">Receptionist</MenuItem>
-          {/* Add other roles as necessary */}
-        </Select>
-      </Box>
-      <Box sx={{ textAlign: 'right', mb: 2 }}>
-        <Button variant="contained" color="primary" onClick={() => handleOpenDetails(null)}>
-          <Add /> Add Staff
+
+      <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+        <FormControl fullWidth>
+          <InputLabel>Department</InputLabel>
+          <Select
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            label="Department"
+          >
+            <MenuItem value="">All Departments</MenuItem>
+            {departments.map(dept => (
+              <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth>
+  <InputLabel>Role</InputLabel>
+  <Select
+    value={selectedRole}
+    onChange={(e) => setSelectedRole(e.target.value)}
+    label="Role"
+  >
+
+    <MenuItem value="">All Roles</MenuItem>
+    {professionsOptions.map(prof => (
+      <MenuItem key={prof} value={prof}>{prof}</MenuItem>
+    ))}
+  </Select>
+</FormControl>
+
+        <Button variant="contained" color="success" onClick={handleOpenAdd}>
+          Add Staff
         </Button>
       </Box>
-      <TableContainer component={Paper} sx={{ mt: 0 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Age</TableCell>
-              <TableCell>Department</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredData.length > 0 ? (
-              filteredData.map((row) => (
-                <TableRow key={row.userId} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell>{row.userId}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>{row.role}</TableCell>
-                  <TableCell>{row.age}</TableCell>
-                  <TableCell>{row.department}</TableCell>
-                  <TableCell>
-                    <Tooltip title="Edit">
-                      <IconButton onClick={() => handleOpenDetails(row)}>
-                        <Edit />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => handleDelete(row.userId)}>
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  No data available
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
 
-      {/* Staff Details Modal */}
-      <Modal
-        open={openDetails}
-        onClose={handleCloseDetails}
-        aria-labelledby="staff-details-title"
-        aria-describedby="staff-details-description"
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 600,
-            maxHeight: '80vh',
-            overflowY: 'scroll',
-            bgcolor: 'background.paper',
-            border: '2px solid #000',
-            boxShadow: 24,
-            p: 4
-          }}
-        >
-          <Typography id="staff-details-title" variant="h6" component="h2" gutterBottom>
-            {formik.values.userId ? 'Edit Staff' : 'Add Staff'}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Profile ID</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Age</TableCell>
+                <TableCell>Department</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Experience</TableCell>
+                <TableCell>Mobile Number</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+                    {Array.isArray(staffData) && staffData.length > 0 ? (
+                      staffData.map(staff => (
+                        <TableRow key={staff.profileId}>
+                          <TableCell>{staff.profileId}</TableCell>
+                          <TableCell>{staff.name}</TableCell>
+                          <TableCell>{staff.age}</TableCell>
+                          <TableCell>{staff.dept}</TableCell>
+                          <TableCell>{staff.role}</TableCell>
+                          <TableCell>{staff.experience}</TableCell>
+                          <TableCell>{staff.mobile}</TableCell>
+                          <TableCell>{staff.email}</TableCell>
+                          <TableCell>{staff.status}</TableCell>
+                          <TableCell>
+                            <Button variant="contained" color="primary" onClick={() => handleOpenEdit(staff)}>Edit</Button>
+                            <Button variant="contained" color="error" onClick={() => handleOpenDelete(staff)}>Delete</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={10} align="center">No staff data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Add Staff Modal */}
+      <Modal open={openAdd} onClose={handleCloseAdd}>
+        <Box sx={{ ...modalStyle, width: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            Add New Staff
           </Typography>
-          <form onSubmit={formik.handleSubmit}>
-            <TextField
-              fullWidth
-              margin="normal"
-              id="email"
-              name="email"
-              label="Email"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="password"
-              name="password"
-              label="Password"
-              type="password"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.password && Boolean(formik.errors.password)}
-              helperText={formik.touched.password && formik.errors.password}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="name"
-              name="name"
-              label="Name"
-              value={formik.values.name}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.name && Boolean(formik.errors.name)}
-              helperText={formik.touched.name && formik.errors.name}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="age"
-              name="age"
-              label="Age"
-              value={formik.values.age}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.age && Boolean(formik.errors.age)}
-              helperText={formik.touched.age && formik.errors.age}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="role-label">Role</InputLabel>
-              <Select
-                labelId="role-label"
-                id="role"
-                name="role"
-                value={formik.values.role}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.role && Boolean(formik.errors.role)}
-              >
-                <MenuItem value="Doctor">Doctor</MenuItem>
-                <MenuItem value="Nurse">Nurse</MenuItem>
-                <MenuItem value="Receptionist">Receptionist</MenuItem>
-                {/* Add other roles as necessary */}
-              </Select>
-              {formik.touched.role && formik.errors.role && (
-                <Typography color="error" variant="caption">
-                  {formik.errors.role}
-                </Typography>
+          <Box sx={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <Formik
+              initialValues={{
+                name: '',
+                email: '',
+                password: '',
+                profession: '',
+                age: '',
+                dept: '',
+                experience: '',
+                mobile: '',
+                address: '',
+                role: 'USER', // Default role
+              }}
+              validationSchema={validationSchema}
+              onSubmit={handleAddStaff}
+            >
+              {({ isSubmitting }) => (
+                <Form>
+                  <Field
+                    name="name"
+                    as={TextField}
+                    label="Name"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="name" />}
+                  />
+                  <Field
+                    name="email"
+                    as={TextField}
+                    label="Email"
+                    type="email"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="email" />}
+                  />
+                  <Field
+                    name="password"
+                    as={TextField}
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    fullWidth
+                    margin="normal"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                    helperText={<ErrorMessage name="password" />}
+                  />
+                  <Field
+                    name="profession"
+                    as={TextField}
+                    label="Profession"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="profession" />}
+                  >
+                    {professionsOptions.map(prof => (
+                      <MenuItem key={prof} value={prof}>{prof}</MenuItem>
+                    ))}
+                  </Field>
+                  <Field
+                    name="age"
+                    as={TextField}
+                    label="Age"
+                    type="number"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="age" />}
+                  />
+                  <Field
+                    name="dept"
+                    as={TextField}
+                    label="Department"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="dept" />}
+                  >
+                    {departments.map(dept => (
+                      <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                    ))}
+                  </Field>
+                  <Field
+                    name="experience"
+                    as={TextField}
+                    label="Experience"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="experience" />}
+                  />
+                  <Field
+                    name="mobile"
+                    as={TextField}
+                    label="Mobile Number"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="mobile" />}
+                  />
+                  <Field
+                    name="address"
+                    as={TextField}
+                    label="Address"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="address" />}
+                  />
+                  <Field
+                    name="role"
+                    as={TextField}
+                    label="Role"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="role" />}
+                  >
+                    {roleOptions.map(role => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Field>
+                  <Box sx={{ mt: 2 }}>
+                    <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
+                      {isSubmitting ? 'Submitting...' : 'Add Staff'}
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={handleCloseAdd}>
+                      Cancel
+                    </Button>
+                  </Box>
+                </Form>
               )}
-            </FormControl>
-            <TextField
-              fullWidth
-              margin="normal"
-              id="mobile"
-              name="mobile"
-              label="Mobile"
-              value={formik.values.mobile}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.mobile && Boolean(formik.errors.mobile)}
-              helperText={formik.touched.mobile && formik.errors.mobile}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="address"
-              name="address"
-              label="Address"
-              value={formik.values.address}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.address && Boolean(formik.errors.address)}
-              helperText={formik.touched.address && formik.errors.address}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              id="department"
-              name="department"
-              label="Department"
-              value={formik.values.department}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.department && Boolean(formik.errors.department)}
-              helperText={formik.touched.department && formik.errors.department}
-            />
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button onClick={handleCloseDetails} variant="outlined" sx={{ mr: 2 }}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="contained" color="primary">
-                {formik.values.userId ? 'Save Changes' : 'Add Staff'}
-              </Button>
-            </Box>
-          </form>
+            </Formik>
+          </Box>
         </Box>
       </Modal>
 
-      {/* Confirmation Dialog for Deleting Staff */}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-        aria-labelledby="confirm-delete-dialog-title"
-        aria-describedby="confirm-delete-dialog-description"
-      >
-        <DialogTitle id="confirm-delete-dialog-title">
-          Confirm Delete
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this staff member?
+      {/* Edit Staff Modal */}
+      <Modal open={openEdit} onClose={handleCloseEdit}>
+        <Box sx={{ ...modalStyle, width: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            Edit Staff
           </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmDelete} color="secondary">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <Box sx={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <Formik
+              initialValues={editingStaff || {
+                name: '',
+                email: '',
+                password: '',
+                profession: '',
+                age: '',
+                dept: '',
+                experience: '',
+                mobile: '',
+                address: '',
+                role: 'USER', // Default role
+              }}
+              enableReinitialize
+              validationSchema={validationSchema}
+              onSubmit={handleEditStaff}
+            >
+              {({ isSubmitting }) => (
+                <Form>
+                  <Field
+                    name="name"
+                    as={TextField}
+                    label="Name"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="name" />}
+                  />
+                  <Field
+                    name="email"
+                    as={TextField}
+                    label="Email"
+                    type="email"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="email" />}
+                  />
+                  <Field
+                    name="password"
+                    as={TextField}
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    fullWidth
+                    margin="normal"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                    helperText={<ErrorMessage name="password" />}
+                  />
+                  <Field
+                    name="profession"
+                    as={TextField}
+                    label="Profession"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="profession" />}
+                  >
+                    {professionsOptions.map(prof => (
+                      <MenuItem key={prof} value={prof}>{prof}</MenuItem>
+                    ))}
+                  </Field>
+                  <Field
+                    name="age"
+                    as={TextField}
+                    label="Age"
+                    type="number"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="age" />}
+                  />
+                  <Field
+                    name="dept"
+                    as={TextField}
+                    label="Department"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="dept" />}
+                  >
+                    {departments.map(dept => (
+                      <MenuItem key={dept} value={dept}>{dept}</MenuItem>
+                    ))}
+                  </Field>
+                  <Field
+                    name="experience"
+                    as={TextField}
+                    label="Experience"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="experience" />}
+                  />
+                  <Field
+                    name="mobile"
+                    as={TextField}
+                    label="Mobile Number"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="mobile" />}
+                  />
+                  <Field
+                    name="address"
+                    as={TextField}
+                    label="Address"
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="address" />}
+                  />
+                  <Field
+                    name="role"
+                    as={TextField}
+                    label="Role"
+                    select
+                    fullWidth
+                    margin="normal"
+                    helperText={<ErrorMessage name="role" />}
+                  >
+                    {roleOptions.map(role => (
+                      <MenuItem key={role} value={role}>{role}</MenuItem>
+                    ))}
+                  </Field>
+                  <Box sx={{ mt: 2 }}>
+                    <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
+                      {isSubmitting ? 'Submitting...' : 'Save Changes'}
+                    </Button>
+                    <Button variant="outlined" color="secondary" onClick={handleCloseEdit}>
+                      Cancel
+                    </Button>
+                  </Box>
+                </Form>
+              )}
+            </Formik>
+          </Box>
+        </Box>
+      </Modal>
+
+      {/* Delete Staff Modal */}
+      <Modal open={openDelete} onClose={handleCloseDelete}>
+        <Box sx={{ ...modalStyle, width: 400 }}>
+          <Typography variant="h6" gutterBottom>
+            Delete Staff
+          </Typography>
+          <Typography variant="body1">
+            Are you sure you want to delete {deletingStaff?.name}?
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Button variant="contained" color="error" onClick={handleDeleteStaff}>
+              Delete
+            </Button>
+            <Button variant="outlined" color="secondary" onClick={handleCloseDelete}>
+              Cancel
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </Box>
   );
+};
+
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4,
 };
 
 export default EmployeeStatusDashboard;
