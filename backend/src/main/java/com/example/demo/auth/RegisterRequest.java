@@ -18,4 +18,11 @@ public class RegisterRequest {
     private String email;
     private String password;
     private Role role;
+    private String profession;
+    private String age;
+    private String dept;
+    private String experience;
+    private String mobile;
+    private String address;
+
 }

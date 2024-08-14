@@ -1,8 +1,8 @@
-package com.example.demo.repo;
+// package com.example.demo.repo;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+// import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.demo.model.Person;
+// import com.example.demo.model.Person;
 
-public interface PersonRepo extends JpaRepository<Person, Integer> {
-}
+// public interface PersonRepo extends JpaRepository<Person, Integer> {
+// }

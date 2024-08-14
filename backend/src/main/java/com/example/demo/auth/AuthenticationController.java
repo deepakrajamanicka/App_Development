@@ -33,5 +33,6 @@ public class AuthenticationController {
         service.logout(userDetails.getUsername());
         return ResponseEntity.ok().build();
     }
-
+    
+    
 }

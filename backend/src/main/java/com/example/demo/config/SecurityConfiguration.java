@@ -1,6 +1,5 @@
 package com.example.demo.config;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,28 +19,29 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
-    private static final String[] PublicEndPoints = {
-            "api/v1/auth/**"
+    private static final String[] PUBLIC_ENDPOINTS = {
+            "/api/v1/auth/**"
     };
 
+    private static final String[] ADMIN_ENDPOINTS = {
+            "/api/v1/staff/register"
+    };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(
-                        authorize -> authorize.requestMatchers(PublicEndPoints).permitAll().anyRequest().authenticated()
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(ADMIN_ENDPOINTS).hasRole("ADMIN") // Restrict to admin role
+                        .anyRequest().authenticated()
                 )
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-                                .maximumSessions(1)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-
     }
-
-
 }

@@ -1,8 +1,14 @@
 package com.example.demo.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
 
 @Entity
+@Builder
+@Data
+@AllArgsConstructor
 @Table(name = "profile")
 public class Profile {
 
@@ -17,6 +23,10 @@ public class Profile {
     private String experience;
     private String mobile;
     private String address;
+
+    @OneToOne
+    @JoinColumn(name = "email", referencedColumnName = "email")
+    private User user;
     
     @OneToOne
     @JoinColumn(name = "schedule_id", referencedColumnName = "scheduleId")
@@ -33,22 +43,19 @@ public class Profile {
     // Constructors
     public Profile() {}
     
-    public Profile(String name, String age, String dept, String role, String experience,String mobile, String address) {
+    public Profile(String name, String age, String dept, String role, String experience, String mobile, String address) {
         this.name = name;
         this.age = age;
         this.dept = dept;
         this.role = role;
         this.mobile = mobile;
         this.address = address;
-        this.experience=experience;
+        this.experience = experience;
     }
     
     // Getters and Setters
     public int getProfileId() {
         return profileId;
-    }
-    public String getExperience() {
-        return experience;
     }
     
     public void setProfileId(int profileId) {
@@ -127,9 +134,11 @@ public class Profile {
         this.timeOffRequest = timeOffRequest;
     }
 
+    public String getExperience() {
+        return experience;
+    }
+
     public void setExperience(String experience) {
         this.experience = experience;
     }
-    
-
 }
