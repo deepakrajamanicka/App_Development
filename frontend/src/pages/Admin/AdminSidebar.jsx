@@ -1,21 +1,21 @@
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday'; // Import CalendarTodayIcon
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import PeopleIcon from '@mui/icons-material/People';
+import SettingsIcon from '@mui/icons-material/Settings';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'; // Import SwapHorizIcon
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
-import Divider from '@mui/material/Divider';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import SettingsIcon from '@mui/icons-material/Settings';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'; // Import CalendarTodayIcon
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz'; // Import SwapHorizIcon
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { Link } from 'react-router-dom';
 
 // Utility function to get admin data from local storage
 const getAdminFromLocalStorage = () => {
@@ -34,6 +34,8 @@ const getAdminFromLocalStorage = () => {
 const drawerWidth = 240;
 
 const AdminSidebar = ({ darkTheme, toggleDarkTheme }) => {
+  const navigate = useNavigate(); // Initialize useNavigate hook
+
   const drawerStyle = {
     width: drawerWidth,
     flexShrink: 0,
@@ -56,6 +58,21 @@ const AdminSidebar = ({ darkTheme, toggleDarkTheme }) => {
     color: darkTheme ? '#fff' : '#000',
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    // Clear the authentication token
+    localStorage.removeItem('authToken'); // Adjust based on your token storage method
+
+    // Clear any session data if needed
+    // sessionStorage.removeItem('sessionData'); 
+
+    // Optional: Clear cookies if necessary
+    // document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'; 
+
+    // Navigate to the home page
+    navigate('/');
+  };
+
   // Retrieve admin data from local storage
   const admin = getAdminFromLocalStorage();
   const adminName = admin.firstName || 'Admin'; // Use firstName if available
@@ -72,7 +89,7 @@ const AdminSidebar = ({ darkTheme, toggleDarkTheme }) => {
             <ListItem disablePadding>
               <ListItemButton sx={listItemStyle}>
                 <ListItemIcon sx={iconStyle}>
-                <AccountCircleIcon />
+                  <AccountCircleIcon />
                 </ListItemIcon>
                 <ListItemText primary={`Profile: ${adminName}`} />
               </ListItemButton>
@@ -145,16 +162,14 @@ const AdminSidebar = ({ darkTheme, toggleDarkTheme }) => {
             </ListItemButton>
           </ListItem>
           <Divider />
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <ListItem disablePadding>
-              <ListItemButton sx={listItemStyle}>
-                <ListItemIcon sx={iconStyle}>
-                  <ExitToAppIcon />
-                </ListItemIcon>
-                <ListItemText primary="Logout" />
-              </ListItemButton>
-            </ListItem>
-          </Link>
+          <ListItem disablePadding>
+            <ListItemButton onClick={handleLogout} sx={listItemStyle}>
+              <ListItemIcon sx={iconStyle}>
+                <ExitToAppIcon />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItemButton>
+          </ListItem>
         </List>
       </Box>
     </Drawer>
